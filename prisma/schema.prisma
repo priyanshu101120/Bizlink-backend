@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  WHOLESALER
+  RETAILER
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String?
+  email        String   @unique
+  mobile       String?  @unique @map("mobile_number")
+  password     String
+  role         Role
+  createdAt    DateTime @default(now()) @map("created_at")
+  refreshToken String?  @map("refresh_token")
+
+  productsOwned           Product[]    @relation("WholesalerProducts")
+  connectionsAsWholesaler Connection[] @relation("WholesalerConnections")
+  connectionsAsRetailer   Connection[] @relation("RetailerConnections")
+
+  @@map("users")
+}
+
+model Product {
+  id           String   @id @default(uuid())
+  wholesalerId String   @map("wholesaler_id")
+  wholesaler   User     @relation("WholesalerProducts", fields: [wholesalerId], references: [id])
+  name         String
+  quantity     Int      @default(0)
+  price        Decimal? @db.Decimal(10, 2)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("products")
+}
+
+model Connection {
+  id           String   @id @default(uuid())
+  wholesalerId String?  @map("wholesaler_id")
+  wholesaler   User?    @relation("WholesalerConnections", fields: [wholesalerId], references: [id])
+  retailerId   String?  @map("retailer_id")
+  retailer     User?    @relation("RetailerConnections", fields: [retailerId], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("connections")
+}
