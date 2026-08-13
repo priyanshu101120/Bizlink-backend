@@ -1,6 +1,10 @@
 import bcrypt from "bcryptjs";
 import { userRepository } from "../repositories/user.repository";
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
+import {
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+} from "../utils/jwt";
 import { RegisterInput, LoginInput } from "../validators/auth.validator";
 
 export class ApiError extends Error {
@@ -74,6 +78,27 @@ export const authService = {
     await userRepository.updateRefreshToken(userId, refreshToken);
     return { accessToken, refreshToken };
   },
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await userRepository.findById(userId);
+    if (!user) throw new ApiError(404, "User not found");
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) throw new ApiError(401, "Current password is incorrect");
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await userRepository.updatePassword(userId, hashed);
+    await userRepository.updateRefreshToken(userId, null); // saare sessions logout ho jayenge security ke liye
+  },
+
+  async deleteAccount(userId: string) {
+    await userRepository.delete(userId);
+  },
+
+  
 };
 
 function sanitizeUser(user: any) {

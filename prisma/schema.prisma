@@ -30,9 +30,9 @@ model User {
 }
 
 model Product {
-  id           String   @id @default(uuid())
+   id           String   @id @default(uuid())
   wholesalerId String   @map("wholesaler_id")
-  wholesaler   User     @relation("WholesalerProducts", fields: [wholesalerId], references: [id])
+  wholesaler   User     @relation("WholesalerProducts", fields: [wholesalerId], references: [id], onDelete: Cascade)
   name         String
   quantity     Int      @default(0)
   price        Decimal? @db.Decimal(10, 2)
@@ -44,9 +44,9 @@ model Product {
 model Connection {
   id           String   @id @default(uuid())
   wholesalerId String?  @map("wholesaler_id")
-  wholesaler   User?    @relation("WholesalerConnections", fields: [wholesalerId], references: [id])
+  wholesaler   User?    @relation("WholesalerConnections", fields: [wholesalerId], references: [id], onDelete: Cascade)
   retailerId   String?  @map("retailer_id")
-  retailer     User?    @relation("RetailerConnections", fields: [retailerId], references: [id])
+  retailer     User?    @relation("RetailerConnections", fields: [retailerId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now()) @map("created_at")
 
   @@map("connections")

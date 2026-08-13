@@ -34,4 +34,13 @@ export const userRepository = {
       select: { id: true, name: true, email: true, role: true },
     });
   },
+  updatePassword(id: string, hashedPassword: string) {
+    return prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword },
+    });
+  },
+  delete(id: string) {
+    return prisma.user.delete({ where: { id } });
+  },
 };

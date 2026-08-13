@@ -1,14 +1,19 @@
 import { connectionRepository } from "../repositories/connection.repository";
 import { productRepository } from "../repositories/product.repository";
+import { getIO } from "../socket/io";
 import {
   CreateProductInput,
   UpdateProductInput,
 } from "../validators/product.validator";
 import { ApiError } from "./auth.service";
 
+const LOW_STOCK_THRESHOLD = 10;
+
 export const productService = {
   async create(wholesalerId: string, input: CreateProductInput) {
-    return productRepository.create(wholesalerId, input);
+    const product = await productRepository.create(wholesalerId, input);
+    emitProductEvent(wholesalerId, product);
+    return product;
   },
 
   async listMine(wholesalerId: string) {
@@ -20,11 +25,13 @@ export const productService = {
     input: UpdateProductInput,
   ) {
     const product = await productRepository.findById(productId);
-    if (!product) throw new Error("Product not found");
+    if (!product) throw new ApiError(404, "Product not found");
     if (product.wholesalerId !== wholesalerId) {
-      throw new ApiError(403, "You are not authorized to update this product");
+      throw new ApiError(403, "You can only edit your own products");
     }
-    return productRepository.update(productId, input);
+    const updated = await productRepository.update(productId, input);
+    emitProductEvent(wholesalerId, updated);
+    return updated;
   },
   async remove(wholesalerId: string, productId: string) {
     const product = await productRepository.findById(productId);
@@ -44,3 +51,15 @@ export const productService = {
     return productRepository.findAllByWholesalerIds(wholesalerIds);
   },
 };
+function emitProductEvent(wholesalerId: string, product: any) {
+  const io = getIO();
+  io.to(`wholesaler:${wholesalerId}`).emit("product:update", product);
+
+  if (product.quantity <= LOW_STOCK_THRESHOLD) {
+    io.to(`wholesaler:${wholesalerId}`).emit("product:low-stock", {
+      productId: product.id,
+      name: product.name,
+      quantity: product.quantity,
+    });
+  }
+}
