@@ -14,7 +14,10 @@ export function initSocket(httpServer: HTTPServer, clientUrl: string) {
     try {
       const rawCookie = socket.handshake.headers.cookie;
       if (!rawCookie) return next(new Error("Not authenticated"));
+
       const parsed = cookie.parse(rawCookie);
+      if (!parsed.accessToken) return next(new Error("Not authenticated"));
+
       const payload = verifyAccessToken(parsed.accessToken);
       socket.data.userId = payload.userId;
       socket.data.role = payload.role;
@@ -28,10 +31,8 @@ export function initSocket(httpServer: HTTPServer, clientUrl: string) {
     const { userId, role } = socket.data;
 
     if (role === "WHOLESALER") {
-      // wholesaler apne khud ke room me join hota hai — updates broadcast karne ke liye
       socket.join(`wholesaler:${userId}`);
     } else {
-      // retailer apne connected wholesalers ke rooms join karta hai
       socket.on("join-wholesaler-rooms", (wholesalerIds: string[]) => {
         wholesalerIds.forEach((id) => socket.join(`wholesaler:${id}`));
       });
